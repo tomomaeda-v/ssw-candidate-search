@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特定技能候補者リアルタイム検索機能</title>
+<style>
+  :root{
+    --green:#4caf72; --green-dark:#3d9660; --bg:#eef1f4; --card:#ffffff;
+    --text:#1d2428; --muted:#7a8590; --orange-bg:#fdeeda; --orange:#c77b1e;
+    --blue-bg:#ddeefb; --blue:#2472ad; --green-tag-bg:#e2f2e8; --green-tag:#2e7d4f;
+    --border:#dde3e8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+  header{background:var(--green);color:#fff;padding:14px 20px;font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+  header .back{cursor:pointer;background:none;border:none;color:#fff;font-size:20px;display:none;line-height:1}
+  .container{max-width:1200px;margin:0 auto;padding:16px}
+
+  /* filters */
+  .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field select,.field input{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:14px;color:var(--text)}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;padding:8px 6px;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted)}
+  .seg button.active{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
+  .toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:8px}
+  .btn{border:none;border-radius:8px;padding:11px 26px;font-size:14px;cursor:pointer;font-weight:600}
+  .btn-search{background:var(--green);color:#fff}
+  .btn-search:hover{background:var(--green-dark)}
+  .btn-clear{background:#5c6670;color:#fff}
+  .count{text-align:right;font-size:13px;color:var(--muted);margin:6px 2px 10px}
+  .count b{color:var(--green);font-size:26px;margin:0 4px;font-weight:700}
+
+  /* cards */
+  .card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:12px;display:flex;gap:16px;align-items:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .15s}
+  .card:hover{box-shadow:0 3px 10px rgba(0,0,0,.12)}
+  .card img{width:66px;height:82px;object-fit:cover;border-radius:6px;flex-shrink:0}
+  .card .info{min-width:150px}
+  .card .no{font-size:13px;color:var(--muted)}
+  .card .who{font-weight:700;margin:3px 0}
+  .card .edu{font-size:13px;color:var(--muted)}
+  .card .tags{flex:1;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{padding:4px 12px;border-radius:14px;font-size:12.5px;font-weight:600;white-space:nowrap}
+  .tag.ind{background:var(--orange-bg);color:var(--orange)}
+  .tag.jp{background:var(--blue-bg);color:var(--blue)}
+  .tag.g{background:var(--green-tag-bg);color:var(--green-tag)}
+  .chev{color:#b6bec6;font-size:20px}
+  .empty{text-align:center;color:var(--muted);padding:60px 0}
+
+  /* detail */
+  #detailView{display:none}
+  .detail-grid{display:grid;grid-template-columns:320px 1fr;gap:16px}
+  @media(max-width:760px){.detail-grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px}
+  .panel h3{font-size:15px;color:var(--green-tag);display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .profile{text-align:center}
+  .profile img{width:110px;height:138px;object-fit:cover;border-radius:8px}
+  .profile .nm{font-size:18px;font-weight:700;margin-top:10px}
+  .profile .nm small{color:var(--muted);font-weight:400;margin-right:8px}
+  .kv{display:flex;flex-wrap:wrap;gap:8px 28px;margin-bottom:10px;font-size:14px}
+  .kv .k{color:var(--muted);margin-right:8px}
+  .kv .v{font-weight:700}
+  .hist{padding:8px 0;border-bottom:1px solid var(--border)}
+  .hist:last-child{border-bottom:none}
+  .hist .dates{font-size:12.5px;color:var(--muted)}
+  .hist .main{font-weight:700;margin-top:2px}
+  .hist .main small{font-weight:400;color:var(--muted);margin-left:8px}
+  .video-ph{background:#1d2428;color:#9aa5ae;border-radius:8px;height:200px;display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:12px}
+  .navbtns{display:flex;justify-content:space-between;gap:10px;position:sticky;bottom:0;background:var(--bg);padding:10px 0}
+  .navbtns .btn{flex:1;background:var(--green);color:#fff}
+  .navbtns .btn:disabled{background:#b8c2ca;cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <button class="back" id="backBtn" onclick="showList()">←</button>
+  <span id="headerTitle">特定技能候補者リアルタイム検索機能</span>
+</header>
+
+<div class="container" id="listView">
+  <div class="filters">
+    <div class="field"><label>合格済み技能評価試験</label><select id="fIndustry"><option value="">すべて</option></select></div>
+    <div class="field"><label>合格済み日本語試験</label><select id="fJp"><option value="">すべて</option></select></div>
+    <div class="field"><label>性別</label>
+      <div class="seg" id="fSex">
+        <button data-v="" class="active">すべて</button><button data-v="男">男性</button><button data-v="女">女性</button>
+      </div>
+    </div>
+    <div class="field"><label>年齢帯</label><select id="fAge"><option value="">すべて</option></select></div>
+    <div class="field"><label>学校名</label><input id="fSchool" type="text" placeholder="部分一致"></div>
+    <div class="field"><label>学部</label><input id="fFaculty" type="text" placeholder="部分一致"></div>
+    <div class="field"><label>No</label><input id="fNo" type="number" placeholder="番号指定"></div>
+  </div>
+  <div class="toolbar">
+    <div class="field" style="width:170px"><label>並べ替え</label>
+      <select id="sortKey">
+        <option value="registeredAt">登録日時</option>
+        <option value="no">No</option>
+        <option value="ageBand">年齢帯</option>
+      </select>
+    </div>
+    <div class="seg" style="width:130px" id="sortDir">
+      <button data-v="desc" class="active">降順</button><button data-v="asc">昇順</button>
+    </div>
+    <button class="btn btn-search" onclick="applyFilters()">&#128269; 検索</button>
+    <button class="btn btn-clear" onclick="clearFilters()">条件クリア</button>
+  </div>
+  <div class="count">合計<b id="total">0</b>名</div>
+  <div id="cards"></div>
+</div>
+
+<div class="container" id="detailView"></div>
+
+<script src="data.js"></script>
+<script>
+let results = [];
+let currentIdx = -1;
+
+/* ---------- init ---------- */
+function initOptions(){
+  const inds = [...new Set(CANDIDATES.flatMap(c=>c.industries))].sort();
+  const jps  = [...new Set(CANDIDATES.map(c=>c.jpTest))].sort();
+  const ages = [...new Set(CANDIDATES.map(c=>c.ageBand))].sort();
+  fill('fIndustry', inds); fill('fJp', jps); fill('fAge', ages);
+}
+function fill(id, arr){
+  const s = document.getElementById(id);
+  arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});
+}
+document.querySelectorAll('.seg').forEach(seg=>{
+  seg.addEventListener('click',e=>{
+    if(e.target.tagName!=='BUTTON')return;
+    seg.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    if(seg.id==='sortDir') applyFilters();
+  });
+});
+document.getElementById('sortKey').addEventListener('change',applyFilters);
+
+/* ---------- filter / sort ---------- */
+function segVal(id){return document.querySelector('#'+id+' button.active').dataset.v;}
+function applyFilters(){
+  const ind=document.getElementById('fIndustry').value,
+        jp=document.getElementById('fJp').value,
+        sex=segVal('fSex'),
+        age=document.getElementById('fAge').value,
+        school=document.getElementById('fSchool').value.trim(),
+        fac=document.getElementById('fFaculty').value.trim(),
+        no=document.getElementById('fNo').value.trim();
+  results = CANDIDATES.filter(c=>
+    (!ind||c.industries.includes(ind)) &&
+    (!jp||c.jpTest===jp) &&
+    (!sex||c.sex===sex) &&
+    (!age||c.ageBand===age) &&
+    (!school||c.education.school.includes(school)) &&
+    (!fac||(c.education.faculty||'').includes(fac)) &&
+    (!no||String(c.no)===no)
+  );
+  const key=document.getElementById('sortKey').value, dir=segVal('sortDir')==='asc'?1:-1;
+  results.sort((a,b)=>{
+    const va=key==='no'?a.no:(key==='registeredAt'?a.registeredAt:a.ageBand);
+    const vb=key==='no'?b.no:(key==='registeredAt'?b.registeredAt:b.ageBand);
+    return (va>vb?1:va<vb?-1:0)*dir;
+  });
+  renderList();
+}
+function clearFilters(){
+  ['fIndustry','fJp','fAge'].forEach(id=>document.getElementById(id).value='');
+  ['fSchool','fFaculty','fNo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('#fSex button').forEach((b,i)=>b.classList.toggle('active',i===0));
+  applyFilters();
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  document.getElementById('total').textContent=results.length;
+  const wrap=document.getElementById('cards');
+  wrap.innerHTML='';
+  if(!results.length){wrap.innerHTML='<div class="empty">該当する候補者がいません。<br>検索条件を変更してお試しください。</div>';return;}
+  results.forEach((c,i)=>{
+    const el=document.createElement('div');el.className='card';el.onclick=()=>showDetail(i);
+    el.innerHTML=`
+      <img src="${c.photo}" alt="">
+      <div class="info">
+        <div class="no">No.${c.no}</div>
+        <div class="who">${c.sex} / ${c.ageBand}</div>
+        <div class="edu">${c.education.school}（${c.education.level}） ${c.education.status}</div>
+      </div>
+      <div class="tags">
+        <div class="tagrow">${c.industries.map(t=>`<span class="tag ind">${t}</span>`).join('')}</div>
+        <div class="tagrow"><span class="tag jp">${c.jpTest}</span></div>
+      </div>
+      <div class="chev">›</div>`;
+    wrap.appendChild(el);
+  });
+}
+
+/* ---------- detail ---------- */
+function showDetail(i){
+  currentIdx=i;
+  const c=results[i];
+  document.getElementById('listView').style.display='none';
+  const dv=document.getElementById('detailView');
+  dv.style.display='block';
+  document.getElementById('backBtn').style.display='inline';
+  document.getElementById('headerTitle').textContent=`${c.no} - ${c.name}`;
+  window.scrollTo(0,0);
+  dv.innerHTML=`
+  <div class="detail-grid">
+    <div>
+      <div class="panel profile">
+        <img src="${c.photo}" alt="">
+        <div class="nm"><small>${c.no}</small>${c.name}</div>
+        <div class="tagrow" style="justify-content:center;margin-top:10px">
+          <span class="tag g">${c.sex}</span><span class="tag g">${c.ageBand}</span><span class="tag g">${c.city}</span>
+        </div>
+        ${c.video
+          ? `<video controls style="width:100%;border-radius:8px;margin-top:12px" src="${c.video}"></video>`
+          : `<div class="video-ph">▶ 自己紹介動画(未登録)</div>`}
+      </div>
+    </div>
+    <div>
+      <div class="panel"><h3>🎖 資格情報</h3>
+        <div class="tagrow" style="margin-bottom:10px">${c.industries.map(t=>`<span class="tag ind">${t}</span>`).join('')}</div>
+        <div class="tagrow"><span class="tag jp">${c.jpTest}</span></div>
+        ${c.certificateUrl?`<p style="margin-top:12px"><a href="${c.certificateUrl}" target="_blank">📄 技能評価試験の合格証を確認する</a></p>`:''}
+      </div>
+      <div class="panel"><h3>🧍 身体情報</h3>
+        <div class="kv"><span><span class="k">身長</span><span class="v">${c.height}cm</span></span>
+        <span><span class="k">体重</span><span class="v">${c.weight}kg</span></span></div>
+        <div class="kv"><span><span class="k">裸眼視力</span><span class="v">左 ${c.visionLeft} ／ 右 ${c.visionRight} ／ 両目 ${c.visionBoth}</span></span></div>
+        <div class="kv"><span><span class="k">食事アレルギー</span><span class="v">${c.allergy}</span></span></div>
+        <div class="kv"><span><span class="k">宗教や慣習などで食べられないもの</span><span class="v">${c.religionFood}</span></span></div>
+      </div>
+      <div class="panel"><h3>🎓 学歴</h3>
+        <div class="hist">
+          <div class="dates">${c.education.from} 〜 ${c.education.to}</div>
+          <div class="main">${c.education.school}（${c.education.level}）${c.education.faculty?` ${c.education.faculty}`:''}<small>${c.education.status}</small></div>
+        </div>
+      </div>
+      <div class="panel"><h3>💼 職歴</h3>
+        ${c.workHistory.map(w=>`
+        <div class="hist">
+          <div class="dates">${w.from} 〜 ${w.to}</div>
+          <div class="main">${w.title}<small>${w.place}</small></div>
+        </div>`).join('')||'<p style="color:var(--muted)">職歴なし</p>'}
+      </div>
+    </div>
+  </div>
+  <div class="navbtns">
+    <button class="btn" onclick="showDetail(${i-1})" ${i<=0?'disabled':''}>‹ 前へ</button>
+    <button class="btn" onclick="showDetail(${i+1})" ${i>=results.length-1?'disabled':''}>次へ ›</button>
+  </div>`;
+}
+function showList(){
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('listView').style.display='block';
+  document.getElementById('backBtn').style.display='none';
+  document.getElementById('headerTitle').textContent='特定技能候補者リアルタイム検索機能';
+}
+
+initOptions();
+applyFilters();
+</script>
+</body>
+</html>
