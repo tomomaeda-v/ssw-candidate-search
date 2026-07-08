@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>候補者データ入力(管理用)</title>
+<style>
+  :root{--green:#4caf72;--green-dark:#3d9660;--bg:#eef1f4;--card:#fff;--text:#1d2428;--muted:#7a8590;--border:#dde3e8;--red:#c0392b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+  header{background:#2f3b4c;color:#fff;padding:14px 20px;font-size:17px;font-weight:700;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  header a{color:#9fd4b5;font-size:13px;text-decoration:none}
+  .container{max-width:1100px;margin:0 auto;padding:16px}
+  .panel{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px}
+  .panel h3{font-size:15px;color:var(--green-dark);margin-bottom:14px;border-left:4px solid var(--green);padding-left:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff}
+  .checks{display:flex;flex-wrap:wrap;gap:8px}
+  .checks label{display:flex;align-items:center;gap:5px;background:#f4f7f5;border:1px solid var(--border);border-radius:16px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .checks label:has(input:checked){background:var(--green);color:#fff;border-color:var(--green)}
+  .btn{border:none;border-radius:8px;padding:11px 22px;font-size:14px;cursor:pointer;font-weight:600}
+  .btn-green{background:var(--green);color:#fff}
+  .btn-green:hover{background:var(--green-dark)}
+  .btn-gray{background:#5c6670;color:#fff}
+  .btn-red{background:var(--red);color:#fff}
+  .btn-sm{padding:6px 12px;font-size:12.5px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .photo-prev{width:80px;height:100px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block;margin-top:6px}
+  .work-row{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end}
+  .note{background:#fdf6e3;border:1px solid #eadfa8;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;margin-bottom:16px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+  .badge{display:inline-block;background:#e2f2e8;color:#2e7d4f;border-radius:10px;padding:2px 8px;font-size:11.5px;margin-right:4px}
+  @media(max-width:640px){.work-row{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<header>
+  <span>候補者データ入力(管理用)</span>
+  <a href="index.html">→ 検索画面を見る</a>
+</header>
+<div class="container">
+
+  <div class="note">
+    <b>使い方:</b> 候補者を追加・編集したら「<b>data.jsをダウンロード</b>」を押し、
+    ダウンロードされた <code>data.js</code> をGitHubリポジトリにアップロード(上書き)してください。1〜2分でサイトに反映されます。<br>
+    ※このページはブラウザ内だけで動作します。ダウンロードしてアップロードするまで、サイトのデータは変わりません。
+  </div>
+
+  <div class="panel">
+    <h3>登録済み候補者(<span id="cnt"></span>名)</h3>
+    <div style="max-height:300px;overflow:auto">
+      <table>
+        <thead><tr><th>No</th><th>氏名</th><th>性別/年齢帯</th><th>分野</th><th>動画</th><th></th></tr></thead>
+        <tbody id="listBody"></tbody>
+      </table>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-green" onclick="newCandidate()">+ 新規追加</button>
+      <button class="btn btn-gray" onclick="downloadData()">⬇ data.jsをダウンロード</button>
+    </div>
+  </div>
+
+  <div class="panel" id="formPanel" style="display:none">
+    <h3 id="formTitle">新規候補者</h3>
+
+    <div class="grid">
+      <div class="field"><label>No(候補者番号)</label><input id="c_no" type="number"></div>
+      <div class="field"><label>氏名(ローマ字)</label><input id="c_name" placeholder="Kyaw Ye Htet"></div>
+      <div class="field"><label>性別</label><select id="c_sex"><option>男</option><option>女</option></select></div>
+      <div class="field"><label>年齢帯</label><select id="c_age">
+        <option>18歳〜19歳</option><option>20歳〜24歳</option><option>25歳〜29歳</option>
+        <option>30歳〜34歳</option><option>35歳〜39歳</option><option>40歳〜44歳</option><option>45歳以上</option>
+      </select></div>
+      <div class="field"><label>出身地(都市)</label><input id="c_city" placeholder="ヤンゴン"></div>
+      <div class="field"><label>登録日</label><input id="c_reg" type="date"></div>
+    </div>
+
+    <div class="field"><label>顔写真(選択すると自動で縮小されます)</label>
+      <input id="c_photoFile" type="file" accept="image/*">
+      <img id="photoPrev" class="photo-prev" style="display:none">
+    </div>
+
+    <div class="field"><label>自己紹介動画URL(YouTube・Google Drive・mp4直リンクなど)</label>
+      <input id="c_video" type="url" placeholder="https://www.youtube.com/watch?v=xxxx(空欄可)">
+    </div>
+
+    <h3 style="margin-top:20px">資格情報</h3>
+    <div class="field"><label>合格済み技能評価試験(複数選択可)</label>
+      <div class="checks" id="indChecks"></div>
+      <input id="c_indOther" placeholder="その他(自由入力、カンマ区切り)" style="margin-top:8px">
+    </div>
+    <div class="grid">
+      <div class="field"><label>合格済み日本語試験</label><select id="c_jp">
+        <option>JLPT-N1</option><option>JLPT-N2</option><option>JLPT-N3</option><option>JLPT-N4</option><option>JLPT-N5</option>
+        <option>JFT-Basic-A2</option><option>JFT-Basic-B1</option><option>JFT-Basic-B2</option><option value="">未取得</option>
+      </select></div>
+      <div class="field"><label>合格証URL(PDF等・任意)</label><input id="c_cert" type="url"></div>
+    </div>
+
+    <h3 style="margin-top:20px">身体情報</h3>
+    <div class="grid">
+      <div class="field"><label>身長(cm)</label><input id="c_height" type="number"></div>
+      <div class="field"><label>体重(kg)</label><input id="c_weight" type="number"></div>
+      <div class="field"><label>裸眼視力 左</label><input id="c_vl" type="number" step="0.1"></div>
+      <div class="field"><label>裸眼視力 右</label><input id="c_vr" type="number" step="0.1"></div>
+      <div class="field"><label>裸眼視力 両目</label><input id="c_vb" type="number" step="0.1"></div>
+      <div class="field"><label>食事アレルギー</label><input id="c_allergy" value="無し"></div>
+      <div class="field"><label>宗教等で食べられないもの</label><input id="c_religion" value="無し"></div>
+    </div>
+
+    <h3 style="margin-top:20px">学歴</h3>
+    <div class="grid">
+      <div class="field"><label>入学日</label><input id="e_from" type="date"></div>
+      <div class="field"><label>卒業日</label><input id="e_to" type="date"></div>
+      <div class="field"><label>学校名</label><input id="e_school"></div>
+      <div class="field"><label>区分</label><select id="e_level"><option>中学校</option><option>高校</option><option>専門学校</option><option>大学</option></select></div>
+      <div class="field"><label>学部(大学の場合)</label><input id="e_fac"></div>
+      <div class="field"><label>状態</label><select id="e_status"><option>卒業</option><option>中退</option><option>在学中</option></select></div>
+    </div>
+
+    <h3 style="margin-top:20px">職歴</h3>
+    <div id="workRows"></div>
+    <button class="btn btn-gray btn-sm" onclick="addWorkRow()">+ 職歴を追加</button>
+
+    <div class="toolbar" style="margin-top:24px">
+      <button class="btn btn-green" onclick="saveCandidate()">保存(一覧へ反映)</button>
+      <button class="btn btn-gray" onclick="hideForm()">キャンセル</button>
+      <button class="btn btn-red" id="delBtn" style="display:none" onclick="deleteCandidate()">この候補者を削除</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+const INDUSTRIES = ["介護","ビルクリーニング","素形材・産業機械・電気電子情報関連製造業","建設業","造船・舶用工業","自動車整備","航空","宿泊業","農業","漁業","飲食料品製造業","外食業","自動車運送業-バス運転者","自動車運送業-トラック運転者","鉄道","林業","木材産業"];
+let data = JSON.parse(JSON.stringify(typeof CANDIDATES!=='undefined'?CANDIDATES:[]));
+let editNo = null;          // 編集中の候補者No(nullなら新規)
+let photoData = "";         // 現在フォームの写真dataURL
+
+/* ---------- 一覧 ---------- */
+function renderTable(){
+  document.getElementById('cnt').textContent = data.length;
+  const tb = document.getElementById('listBody');
+  tb.innerHTML = '';
+  [...data].sort((a,b)=>b.no-a.no).forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.no}</td><td>${c.name}</td><td>${c.sex} / ${c.ageBand}</td>
+      <td>${c.industries.map(i=>`<span class="badge">${i}</span>`).join('')}</td>
+      <td>${c.video?'✅':'―'}</td>
+      <td><button class="btn btn-gray btn-sm" onclick="editCandidate(${c.no})">編集</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- フォーム ---------- */
+function initIndChecks(){
+  const set = new Set(INDUSTRIES);
+  data.forEach(c=>c.industries.forEach(i=>set.add(i)));
+  const box = document.getElementById('indChecks');
+  box.innerHTML = '';
+  [...set].forEach(v=>{
+    const l=document.createElement('label');
+    l.innerHTML = `<input type="checkbox" value="${v}">${v}`;
+    box.appendChild(l);
+  });
+}
+function newCandidate(){
+  editNo = null; photoData = "";
+  document.getElementById('formTitle').textContent='新規候補者';
+  document.getElementById('delBtn').style.display='none';
+  clearForm();
+  document.getElementById('c_no').value = data.length ? Math.max(...data.map(c=>c.no))+1 : 1;
+  document.getElementById('c_reg').value = new Date().toISOString().slice(0,10);
+  showForm();
+}
+function editCandidate(no){
+  const c = data.find(x=>x.no===no); if(!c) return;
+  editNo = no; photoData = c.photo||"";
+  document.getElementById('formTitle').textContent=`編集:No.${no} ${c.name}`;
+  document.getElementById('delBtn').style.display='inline-block';
+  clearForm();
+  set('c_no',c.no); set('c_name',c.name); set('c_sex',c.sex); set('c_age',c.ageBand);
+  set('c_city',c.city); set('c_reg',c.registeredAt); set('c_video',c.video); set('c_jp',c.jpTest);
+  set('c_cert',c.certificateUrl); set('c_height',c.height); set('c_weight',c.weight);
+  set('c_vl',c.visionLeft); set('c_vr',c.visionRight); set('c_vb',c.visionBoth);
+  set('c_allergy',c.allergy); set('c_religion',c.religionFood);
+  set('e_from',c.education.from); set('e_to',c.education.to); set('e_school',c.education.school);
+  set('e_level',c.education.level); set('e_fac',c.education.faculty); set('e_status',c.education.status);
+  const others=[];
+  document.querySelectorAll('#indChecks input').forEach(i=>{i.checked=c.industries.includes(i.value);});
+  c.industries.forEach(i=>{if(![...document.querySelectorAll('#indChecks input')].some(x=>x.value===i)) others.push(i);});
+  set('c_indOther',others.join(','));
+  (c.workHistory||[]).forEach(w=>addWorkRow(w));
+  if(photoData){const p=document.getElementById('photoPrev');p.src=photoData;p.style.display='block';}
+  showForm();
+}
+function showForm(){document.getElementById('formPanel').style.display='block';window.scrollTo({top:document.getElementById('formPanel').offsetTop-10,behavior:'smooth'});}
+function hideForm(){document.getElementById('formPanel').style.display='none';}
+function set(id,v){document.getElementById(id).value = v==null?'':v;}
+function val(id){return document.getElementById(id).value.trim();}
+function clearForm(){
+  document.querySelectorAll('#formPanel input, #formPanel select').forEach(el=>{
+    if(el.type==='checkbox')el.checked=false; else if(el.type==='file')el.value=''; else el.value='';
+  });
+  document.getElementById('c_sex').value='男';
+  document.getElementById('c_allergy').value='無し';
+  document.getElementById('c_religion').value='無し';
+  document.getElementById('workRows').innerHTML='';
+  document.getElementById('photoPrev').style.display='none';
+}
+
+/* ---------- 職歴行 ---------- */
+function addWorkRow(w){
+  w = w||{};
+  const div=document.createElement('div');div.className='work-row';
+  div.innerHTML=`
+    <div class="field"><label>開始(YYYY-MM)</label><input class="w_from" placeholder="2018-03" value="${w.from||''}"></div>
+    <div class="field"><label>終了(YYYY-MM)</label><input class="w_to" placeholder="2021-06" value="${w.to||''}"></div>
+    <div class="field"><label>職種・仕事内容</label><input class="w_title" value="${w.title||''}"></div>
+    <div class="field"><label>勤務地</label><input class="w_place" value="${w.place||''}"></div>
+    <button class="btn btn-red btn-sm" onclick="this.parentElement.remove()">削除</button>`;
+  document.getElementById('workRows').appendChild(div);
+}
+
+/* ---------- 写真縮小 ---------- */
+document.getElementById('c_photoFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const img=new Image();
+  img.onload=()=>{
+    const W=240, H=Math.round(img.height*W/img.width);
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+    cv.getContext('2d').drawImage(img,0,0,W,H);
+    photoData=cv.toDataURL('image/jpeg',0.82);
+    const p=document.getElementById('photoPrev');p.src=photoData;p.style.display='block';
+    URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(f);
+});
+
+/* ---------- 保存 ---------- */
+function saveCandidate(){
+  const no=parseInt(val('c_no'),10);
+  if(!no){alert('Noを入力してください');return;}
+  if(!val('c_name')){alert('氏名を入力してください');return;}
+  if(data.some(c=>c.no===no && no!==editNo)){alert('No.'+no+' は既に使われています');return;}
+  const inds=[...document.querySelectorAll('#indChecks input:checked')].map(i=>i.value);
+  val('c_indOther').split(',').map(s=>s.trim()).filter(Boolean).forEach(s=>{if(!inds.includes(s))inds.push(s);});
+  const c={
+    no, name:val('c_name'), sex:val('c_sex'), ageBand:val('c_age'), city:val('c_city'),
+    photo:photoData, video:val('c_video'), industries:inds, jpTest:val('c_jp'),
+    certificateUrl:val('c_cert'),
+    height:+val('c_height')||null, weight:+val('c_weight')||null,
+    visionLeft:+val('c_vl')||null, visionRight:+val('c_vr')||null, visionBoth:+val('c_vb')||null,
+    allergy:val('c_allergy')||'無し', religionFood:val('c_religion')||'無し',
+    education:{from:val('e_from'),to:val('e_to'),school:val('e_school'),level:val('e_level'),faculty:val('e_fac'),status:val('e_status')},
+    workHistory:[...document.querySelectorAll('.work-row')].map(r=>({
+      from:r.querySelector('.w_from').value.trim(), to:r.querySelector('.w_to').value.trim(),
+      title:r.querySelector('.w_title').value.trim(), place:r.querySelector('.w_place').value.trim()
+    })).filter(w=>w.title),
+    registeredAt:val('c_reg')||new Date().toISOString().slice(0,10)
+  };
+  if(editNo!=null){data[data.findIndex(x=>x.no===editNo)]=c;}else{data.push(c);}
+  renderTable(); hideForm();
+  alert('一覧に反映しました。「data.jsをダウンロード」してGitHubにアップロードすると公開されます。');
+}
+function deleteCandidate(){
+  if(editNo==null) return;
+  if(!confirm('No.'+editNo+' を削除しますか?')) return;
+  data=data.filter(c=>c.no!==editNo);
+  renderTable(); hideForm();
+}
+
+/* ---------- data.js生成 ---------- */
+function downloadData(){
+  const content='// 候補者データ:admin.htmlで生成 '+new Date().toISOString().slice(0,10)+'\n'
+    +'const CANDIDATES = '+JSON.stringify(data,null,2)+';\n';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'text/javascript'}));
+  a.download='data.js';
+  a.click();
+}
+
+initIndChecks();
+renderTable();
+</script>
+</body>
+</html>

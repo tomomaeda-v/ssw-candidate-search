@@ -197,6 +197,22 @@ function renderList(){
   });
 }
 
+/* ---------- video ---------- */
+function videoEmbed(url){
+  if(!url) return '<div class="video-ph">▶ 自己紹介動画(未登録)</div>';
+  // YouTube
+  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
+  if(m) return `<iframe style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin-top:12px" src="https://www.youtube.com/embed/${m[1]}" allowfullscreen></iframe>`;
+  // Google Drive
+  m = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if(m) return `<iframe style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin-top:12px" src="https://drive.google.com/file/d/${m[1]}/preview" allowfullscreen></iframe>`;
+  // 直リンク動画
+  if(/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url))
+    return `<video controls style="width:100%;border-radius:8px;margin-top:12px" src="${url}"></video>`;
+  // その他はリンク表示
+  return `<p style="margin-top:12px"><a href="${url}" target="_blank" rel="noopener">▶ 自己紹介動画を見る</a></p>`;
+}
+
 /* ---------- detail ---------- */
 function showDetail(i){
   currentIdx=i;
@@ -216,9 +232,7 @@ function showDetail(i){
         <div class="tagrow" style="justify-content:center;margin-top:10px">
           <span class="tag g">${c.sex}</span><span class="tag g">${c.ageBand}</span><span class="tag g">${c.city}</span>
         </div>
-        ${c.video
-          ? `<video controls style="width:100%;border-radius:8px;margin-top:12px" src="${c.video}"></video>`
-          : `<div class="video-ph">▶ 自己紹介動画(未登録)</div>`}
+        ${videoEmbed(c.video)}
       </div>
     </div>
     <div>
@@ -263,6 +277,7 @@ function showList(){
 
 initOptions();
 applyFilters();
+/* v1.1 */
 </script>
 </body>
 </html>
